@@ -9,6 +9,7 @@ const FOV_ANGLE = 60 * (Math.PI / 180);
 
 const WALL_STRIP_WIDTH = 1; 
 const NUM_RAYS = WINDOW_WIDTH / WALL_STRIP_WIDTH;
+
 const MINIMAP_SCALE_FACTOR = 0.2;
 
 class Map {
@@ -262,6 +263,27 @@ function castAllRays() {
     }
 }
 
+function render3DProjectedWalls() {
+    for (var i = 0; i < NUM_RAYS; i++) {
+        var ray = rays[i];
+
+        var rayDistance = ray.distance;
+
+        var distanceProjectionPlane = (WINDOW_WIDTH / 2) / Math.tan(FOV_ANGLE / 2);
+
+        var wallStripHeight = (TILE_SIZE / rayDistance) * distanceProjectionPlane;
+
+        fill("rgba(255, 255, 255, 1.0)");
+        noStroke();
+        rect(
+            i * WALL_STRIP_WIDTH, 
+            (WINDOW_HEIGHT / 2) - (wallStripHeight / 2),
+            WALL_STRIP_WIDTH,
+            wallStripHeight
+        );
+    }
+}
+
 function normalizeAngle(angle) {
     angle = angle % (2 * Math.PI);
     if (angle < 0) {
@@ -284,7 +306,10 @@ function update() {
 }
 
 function draw() {
+    clear("#212121");
     update();
+
+    render3DProjectedWalls();
 
     grid.render();
     for (ray of rays) {
