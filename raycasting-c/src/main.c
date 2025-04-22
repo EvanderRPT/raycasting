@@ -73,14 +73,57 @@ void setup() {
 
     player.x = WINDOW_WIDTH / 2;
     player.y = WINDOW_HEIGHT / 2;
-    player.width = 5;
-    player.height = 5;
+    player.width = 1;
+    player.height = 1;
     player.turnDirection = 0;
     player.walkDirection = 0;
     player.rotationAngle = PI / 2;
-    player.walkSpeed = 100;
+    player.walkSpeed = 50;
     player.turnSpeed = 45 * (PI / 1000);
 
+}
+
+int mapHasWallAt(float x, float y) {
+    if (x < 0 || x > WINDOW_WIDTH || y < 0 || y > WINDOW_HEIGHT) {
+        return TRUE;
+    }
+    int mapGridIndeX = floor(x / TILE_SIZE);
+    int mapGridIndeY = floor(y / TILE_SIZE);
+    return map[mapGridIndeY][mapGridIndeX] != 0;
+}
+
+void movePlayer(int deltaTime) {
+    player.rotationAngle += player.turnDirection * player.turnSpeed * deltaTime;
+    float moveStep = player.walkDirection * player.walkSpeed * deltaTime;
+
+    float newPlayerX = player.x + cos(player.rotationAngle) * moveStep;
+    float newPlayerY = player.y + sin(player.rotationAngle) * moveStep;
+    printf("Trying to move to (%f, %f)\n", newPlayerX, newPlayerY);
+
+    if (!mapHasWallAt(newPlayerX, newPlayerY)) {
+        player.x = newPlayerX;
+        player.y = newPlayerY;
+
+    }
+}
+
+
+void renderPlayer() {
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_Rect playerRect = {
+        player.x * MINIMAP_SCALE_FACTOR,
+        player.y * MINIMAP_SCALE_FACTOR,
+        player.width * MINIMAP_SCALE_FACTOR,
+        player.height * MINIMAP_SCALE_FACTOR
+    };
+    SDL_RenderFillRect(renderer, &playerRect);
+    SDL_RenderDrawLine(
+        renderer,
+        player.x * MINIMAP_SCALE_FACTOR,
+        player.y * MINIMAP_SCALE_FACTOR,
+        player.x * MINIMAP_SCALE_FACTOR + cos(player.rotationAngle) * 40,
+        player.y * MINIMAP_SCALE_FACTOR + sin(player.rotationAngle) * 40  
+    );
 }
 
 void  renderMap() {
@@ -101,7 +144,6 @@ void  renderMap() {
         }
     }
 }
-
 void processInput() {
     SDL_Event event;
     SDL_PollEvent(&event);
@@ -113,10 +155,30 @@ void processInput() {
         case SDL_KEYDOWN: {
             if (event.key.keysym.sym == SDLK_ESCAPE)
                 isGameRunning = FALSE;
+            if (event.key.keysym.sym == SDLK_UP)
+                player.walkDirection = +1;
+            if (event.key.keysym.sym == SDLK_DOWN)
+                player.walkDirection = -1;
+            if (event.key.keysym.sym == SDLK_RIGHT)
+                player.turnDirection = +1;
+            if (event.key.keysym.sym == SDLK_LEFT)
+                player.turnDirection = -1;
+            break;
+        }
+        case SDL_KEYUP: {
+            if (event.key.keysym.sym == SDLK_UP)
+                player.walkDirection = 0;
+            if (event.key.keysym.sym == SDLK_DOWN)
+                player.walkDirection = 0;
+            if (event.key.keysym.sym == SDLK_RIGHT)
+                player.turnDirection = 0;
+            if (event.key.keysym.sym == SDLK_LEFT)
+                player.turnDirection = 0;
             break;
         }
     }
 }
+
 
 void update() {
 
@@ -126,6 +188,8 @@ void update() {
 
     ticksLastFrame = SDL_GetTicks();
 
+    movePlayer(deltaTime);
+
 }
 
 void render() {
@@ -134,7 +198,7 @@ void render() {
 
     renderMap();
     // renderRays();
-    // renderPlayer();
+    renderPlayer();
 
     SDL_RenderPresent(renderer);
 }
