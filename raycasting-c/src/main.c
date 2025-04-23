@@ -52,6 +52,8 @@ int ticksLastFrame;
 Uint32* colorBuffer = NULL;
 SDL_Texture* colorBufferTexture;
 
+Uint32* wallTexture = NULL;
+
 int initializeWindow() {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         fprintf(stderr, "Error initializing SDL.\n");
@@ -109,6 +111,14 @@ void setup() {
         WINDOW_WIDTH,
         WINDOW_HEIGHT
     );
+
+    wallTexture = (Uint32*)malloc(sizeof(Uint32) * (Uint32)TEXTURE_WIDTH * (Uint32)TEXTURE_HEIGHT);
+    for (int x = 0; x < TEXTURE_WIDTH; x++) {
+        for (int y = 0; y < TEXTURE_HEIGHT; y++) {
+            wallTexture[(TEXTURE_WIDTH * y) + x] = (x % 8 && y % 8) ? 0xFF0000FF : 0xFF000000;
+        }
+    }
+
 }
 
 int mapHasWallAt(float x, float y) {
@@ -380,6 +390,44 @@ void update() {
     castAllRays();
 }
 
+void generate3DProjection() {
+    for (int i = 0; i < NUM_RAYS; i++) {
+        float perpDistance = rays[i].distance * cos(rays[i].rayAngle - player.rotationAngle);
+
+        float distanceProjPlane = (WINDOW_WIDTH / 2) / tan(FOV_ANGLE / 2);
+        float projectedWallHeight = (TILE_SIZE / perpDistance) * distanceProjPlane;
+
+        int wallStripHeight = (int)projectedWallHeight;
+        int wallTopPixel = (WINDOW_HEIGHT / 2) - (wallStripHeight / 2);
+        wallTopPixel = wallTopPixel < 0 ? 0 : wallTopPixel;
+
+        int wallBottomPixel = (WINDOW_HEIGHT / 2) + (wallStripHeight / 2);
+        wallBottomPixel = wallBottomPixel > WINDOW_HEIGHT ? WINDOW_HEIGHT : wallBottomPixel;
+
+
+        for (int y = 0; y < wallTopPixel; y++) {
+            colorBuffer[(WINDOW_WIDTH * y) + i] = 0xFF444444;
+        }
+        
+        int textureOffSetX;
+        if (rays[i].wasHitVertical) { // vertical intersection
+            textureOffSetX = (int)rays[i].wallHitY % TEXTURE_HEIGHT;
+        } else { // horizontal 
+            textureOffSetX = (int)rays[i].wallHitX % TEXTURE_WIDTH;
+        }
+        for (int y = wallTopPixel; y < wallBottomPixel; y++) {
+            int distanceFormTop = y + (wallStripHeight / 2) - (WINDOW_HEIGHT / 2); 
+
+            int textureOffSetY = distanceFormTop * ((float)TEXTURE_HEIGHT / wallStripHeight);
+            Uint32 textlColor = wallTexture[(TEXTURE_WIDTH * textureOffSetY) + textureOffSetX];
+            colorBuffer[(WINDOW_WIDTH * y) + i] = textlColor;
+        }
+        for (int y = wallBottomPixel; y < WINDOW_HEIGHT; y++){
+            colorBuffer[(WINDOW_WIDTH * y) + i] = 0xFF888888;
+        }
+    }
+}
+
 void clearColorBuffer(Uint32 color) {
     for (int x = 0; x < WINDOW_WIDTH; x++)
         for (int y = 0; y < WINDOW_HEIGHT; y++)
@@ -399,6 +447,7 @@ void renderColorBuffer() {
 void render() {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
+    generate3DProjection();
 
     renderColorBuffer();
 
