@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <limits.h>
+#include <stdint.h>
 #include <SDL2/SDL.h>
 #include "constants.h"
-#include "texture.h"
+#include "textures.h"
 const int map[MAP_NUM_ROWS][MAP_NUM_COLS] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 ,1, 1, 1, 1, 1, 1, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
@@ -49,10 +50,10 @@ SDL_Renderer* renderer = NULL;
 int isGameRunning = FALSE;
 int ticksLastFrame;
 
-Uint32* colorBuffer = NULL;
+uint32_t* colorBuffer = NULL;
 SDL_Texture* colorBufferTexture;
 
-Uint32* textures[NUM_TEXTURES];
+uint32_t* textures[NUM_TEXTURES];
 
 int initializeWindow() {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -82,6 +83,7 @@ int initializeWindow() {
 }
 
 void destroyWindow() {
+    freeWallTextures();
     free(colorBuffer);
     SDL_DestroyTexture(colorBufferTexture);
     SDL_DestroyRenderer(renderer);
@@ -101,25 +103,18 @@ void setup() {
     player.turnSpeed = 45 * (PI / 180);
 
     // allocate the total amount of bytes in memory to hold our colorbuffer
-    colorBuffer = (Uint32*)malloc(sizeof(Uint32) * WINDOW_WIDTH * WINDOW_HEIGHT);
+    colorBuffer = (uint32_t*)malloc(sizeof(uint32_t) * WINDOW_WIDTH * WINDOW_HEIGHT);
 
     // create an SDL_Texture to display the colorbuffer
     colorBufferTexture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_ARGB8888,
+        SDL_PIXELFORMAT_RGBA32,
         SDL_TEXTUREACCESS_STREAMING,
         WINDOW_WIDTH,
         WINDOW_HEIGHT
     );
 
-    textures[0] = (Uint32*) REDBRICK_TEXTURE;
-    textures[1] = (Uint32*) PURPLESTONE_TEXTURE;
-    textures[2] = (Uint32*) MOSSYSTONE_TEXTURE;
-    textures[3] = (Uint32*) GRAYSTONE_TEXTURE;
-    textures[4] = (Uint32*) COLORSTONE_TEXTURE;
-    textures[5] = (Uint32*) BLUESTONE_TEXTURE;
-    textures[6] = (Uint32*) WOOD_TEXTURE;
-    textures[7] = (Uint32*) EAGLE_TEXTURE;
+    loadWallTextures();
 
 }
 
@@ -425,7 +420,7 @@ void generate3DProjection() {
             int distanceFormTop = y + (wallStripHeight / 2) - (WINDOW_HEIGHT / 2); 
 
             int textureOffSetY = distanceFormTop * ((float)TEXTURE_HEIGHT / wallStripHeight);
-            Uint32 textlColor = textures[texNum][(TEXTURE_WIDTH * textureOffSetY) + textureOffSetX];
+            uint32_t textlColor = wallTextures[texNum].texture_buffer[(TEXTURE_WIDTH * textureOffSetY) + textureOffSetX];
             colorBuffer[(WINDOW_WIDTH * y) + i] = textlColor;
         }
         for (int y = wallBottomPixel; y < WINDOW_HEIGHT; y++){
@@ -434,7 +429,7 @@ void generate3DProjection() {
     }
 }
 
-void clearColorBuffer(Uint32 color) {
+void clearColorBuffer(uint32_t color) {
     for (int x = 0; x < WINDOW_WIDTH; x++)
         for (int y = 0; y < WINDOW_HEIGHT; y++)
             colorBuffer[(WINDOW_WIDTH * y) + x] = color;
@@ -445,7 +440,7 @@ void renderColorBuffer() {
         colorBufferTexture,
         NULL,
         colorBuffer,
-        (int)(WINDOW_WIDTH * sizeof(Uint32))
+        (int)(WINDOW_WIDTH * sizeof(uint32_t))
     );
     SDL_RenderCopy(renderer, colorBufferTexture, NULL, NULL);
 }
