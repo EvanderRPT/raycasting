@@ -33,12 +33,12 @@ int getMapAt(int i, int j) {
     return map[i][j];
 }
 
-void renderMap(void) {
+void renderMapGrid(void) {
     for (int i = 0; i < MAP_NUM_ROWS; i++) {
         for (int j = 0; j < MAP_NUM_COLS; j++) {
             int tileX = j * TILE_SIZE;
             int tileY = i * TILE_SIZE;
-            uint32_t tileColor = map[i][j] != 0 ? 0xFFFFFFFF : 0x00000000;
+            color_t tileColor = map[i][j] != 0 ? 0xFFFFFFFF : 0x00000000;
             drawRect(
                 tileX * MINIMAP_SCALE_FACTOR,
                 tileY * MINIMAP_SCALE_FACTOR,
